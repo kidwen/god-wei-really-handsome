@@ -1,7 +1,8 @@
+import pymysql
 import requests
-from flask import Flask, render_template
-from lxml import etree
-import  re
+from flask import Flask, render_template,request,make_response
+import config
+import logging
 from urllib import parse
 from flask import json
 app=Flask(__name__)
@@ -69,6 +70,7 @@ file_header={
 #     else:
 #         res["hasNextPage"]=True
 #     return json.dumps(res)
+#获取某个分类下的专辑
 @app.route("/audio/list/<int:atype>/<int:page>")
 def get_program_list_new(atype,page):
     res_data={}
@@ -98,7 +100,11 @@ def get_program_list_new(atype,page):
         r_data["audio_list"]=d_list
         audio_list.append(r_data)
     res_data["res_data"]=audio_list
-    return json.dumps(res_data,ensure_ascii=False)
+    json_data_= json.dumps(res_data,ensure_ascii=False)
+    res=make_response(json_data_)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
+#获取某个专辑下音频列表
 @app.route("/audio/source/<int:id>/<int:page>")
 def get_program_data(id,page):
     data_url=detail_data_url.format(id,page)
@@ -118,7 +124,10 @@ def get_program_data(id,page):
         data["url"]=get_file_data(data["trackId"])
         data_list.append(res_data)
     json_data["data"]["tracks"]=data_list
-    return json.dumps(json_data,ensure_ascii=False)
+    json_data_ =json.dumps(json_data,ensure_ascii=False)
+    res=make_response(json_data_)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
 def get_file_data(id):
     file_url=source_url.format(id)
     print(file_url)
@@ -127,6 +136,7 @@ def get_file_data(id):
     print(file_data)
     real_url=file_data["data"]["src"]
     return real_url
+#根据关键词获取专辑列表
 @app.route("/audio/search/<kw>/<page>")
 def get_search_res(kw,page):
     kw_quote=parse.quote(kw)
@@ -149,7 +159,11 @@ def get_search_res(kw,page):
         if not d["isPaid"]:
             d_list.append(d)
     res_data["audio_list"]=d_list
-    return json.dumps(res_data,ensure_ascii=False)
+    json_data_= json.dumps(res_data,ensure_ascii=False)
+    res=make_response(json_data_)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
+#获取所有分类
 @app.route("/audio/all")
 def get_home_page():
     type_list=[]
@@ -157,6 +171,59 @@ def get_home_page():
         data_dict=json.load(f)
         for k in data_dict.keys():
             type_list.append({"type_name":k,"url":"http://www.vision123.site/audio/list/{}/1".format(data_dict[k])})
-    return json.dumps(type_list,ensure_ascii=False)
+    json_data=json.dumps(type_list,ensure_ascii=False)
+    res=make_response(json_data)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
+
+@app.route("/audio/user",methods=["get","delete","put","post"])
+def get_user_opetion():
+    res_data={"user_status":False}
+    user_id= request.args.get('userId')
+    select_sql="select user_name,password,phone_number from users where user_id=%"
+    conn, cursor1 = get_mysql_conn()
+    cursor1.execute(select_sql,user_id.strip())
+    data = cursor1.fetchone()
+    if data is not None:
+        res_data["userStatus"]=True
+        res_data["userName"]=data[0]
+        res_data["password"]=data[1]
+        res_data["phoneNumber"]=data[2]
+    else:
+        res_data["fail_mes"]="用户不存在"
+    if request.method=='POST':
+        select_sql="select user_name,password,phone_number from users where user_id=%"
+        conn, cursor1 = get_mysql_conn()
+        user_id= request.args.get('userId')
+        cursor1.execute(select_sql,user_id.strip())
+        data = cursor1.fetchone()
+        if data is not None:
+            res_data["userStatus"]=True
+            user_name= request.args.get('userName',data[0])
+            password= request.args.get('password',data[1])
+            phone_number= request.args.get('phoneNumber',data[2])
+            update_sql="update users set user_name=%s,password=%s,phone_number=%s  where user_id=%s"
+            res=cursor1.execute(update_sql,(user_id,user_name,password,phone_number))
+            conn.commit()
+        else:
+            res_data["fail_mes"]="用户不存在"
+    elif request.method=='DELETE':
+
+    json_data=json.dumps(res_data,ensure_ascii=False)
+    res=make_response(json_data)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
+def get_mysql_conn():
+    conn = None
+    cursor1 = None
+    try:
+        conn = pymysql.connect(host=config.host, port=config.port, user=config.user,
+                               passwd=config.passwd,
+                               db=config.db, charset='utf8', local_infile=1)
+        # 创建游标对象
+        cursor1 = conn.cursor()
+    except Exception as e:
+        logging.log(logging.ERROR,"数据库连接失败")
+    return conn, cursor1
 if __name__ == '__main__':
     app.run(debug = True,host="127.0.0.1" ,port=8886)
