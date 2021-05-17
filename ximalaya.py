@@ -120,8 +120,9 @@ def get_program_data(id,page):
             "playCount":data["playCount"],
             "createDateFormat":data["createDateFormat"],
             "timeLength":data["length"],
+            "trackId":data["trackId"]
         }
-        data["url"]=get_file_data(data["trackId"])
+       # data["url"]=get_file_data(data["trackId"])
         data_list.append(res_data)
     json_data["data"]["tracks"]=data_list
     json_data_ =json.dumps(json_data,ensure_ascii=False)
@@ -176,7 +177,7 @@ def get_home_page():
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 
-@app.route("/audio/user",methods=["get","delete","put","post"])
+#@app.route("/audio/user",methods=["get","delete","put","post"])
 def get_user_opetion():
     res_data={"user_status":False}
     user_id= request.args.get('userId')
@@ -208,7 +209,7 @@ def get_user_opetion():
         else:
             res_data["fail_mes"]="用户不存在"
     elif request.method=='DELETE':
-
+        pass
     json_data=json.dumps(res_data,ensure_ascii=False)
     res=make_response(json_data)
     res.headers['Access-Control-Allow-Origin']='*'
