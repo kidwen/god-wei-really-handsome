@@ -1,6 +1,6 @@
 import pymysql
 import requests
-from flask import Flask, render_template,request,make_response
+from flask import Flask, render_template,request,make_response,jsonify
 import config
 import logging
 from urllib import parse
@@ -100,8 +100,8 @@ def get_program_list_new(atype,page):
         r_data["audio_list"]=d_list
         audio_list.append(r_data)
     res_data["res_data"]=audio_list
-    json_data_= json.dumps(res_data,ensure_ascii=False)
-    res=make_response(json_data_)
+    # json_data_= json.dumps(res_data,ensure_ascii=False)
+    res=jsonify(res_data)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 #获取某个专辑下音频列表
@@ -125,8 +125,8 @@ def get_program_data(id,page):
        # data["url"]=get_file_data(data["trackId"])
         data_list.append(res_data)
     json_data["data"]["tracks"]=data_list
-    json_data_ =json.dumps(json_data,ensure_ascii=False)
-    res=make_response(json_data_)
+    # json_data_ =json.dumps(json_data,ensure_ascii=False)
+    res=jsonify(json_data)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 def get_file_data(id):
@@ -160,8 +160,8 @@ def get_search_res(kw,page):
         if not d["isPaid"]:
             d_list.append(d)
     res_data["audio_list"]=d_list
-    json_data_= json.dumps(res_data,ensure_ascii=False)
-    res=make_response(json_data_)
+    # json_data_= json.dumps(res_data,ensure_ascii=False)
+    res=jsonify(res_data)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 #获取所有分类
@@ -172,8 +172,8 @@ def get_home_page():
         data_dict=json.load(f)
         for k in data_dict.keys():
             type_list.append({"type_name":k,"url":"http://www.vision123.site/audio/list/{}/1".format(data_dict[k])})
-    json_data=json.dumps(type_list,ensure_ascii=False)
-    res=make_response(json_data)
+    # json_data=json.dumps(type_list,ensure_ascii=False)
+    res=jsonify(type_list)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 
@@ -210,8 +210,8 @@ def get_user_opetion():
             res_data["fail_mes"]="用户不存在"
     elif request.method=='DELETE':
         pass
-    json_data=json.dumps(res_data,ensure_ascii=False)
-    res=make_response(json_data)
+    # json_data=json.dumps(res_data,ensure_ascii=False)
+    res=jsonify(res_data)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 def get_mysql_conn():
