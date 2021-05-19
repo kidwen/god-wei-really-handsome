@@ -8,13 +8,14 @@ from flask import json
 app=Flask(__name__)
 
 #第一个接口，用来请求每个分类下的所有节目
-list_page_url='https://www.ximalaya.com/channel/{}/p{}/'# $1分类号，$2页码
-list_page_url_new='https://www.ximalaya.com/revision/metadata/v2/group/channels/recommend/albums?groupId={}&pageNum={}&pageSize=5'
+#list_page_url='https://www.ximalaya.com/channel/{}/p{}/'# $1分类号，$2页码
+list_page_url_new='https://www.ximalaya.com/revision/metadata/v2/group/channels/recommend/albums?groupId={}&pageNum={}&pageSize=30'
+channels_page_url='https://www.ximalaya.com/revision/metadata/v2/channel/albums?pageNum={}&pageSize=30&sort=1&metadataValueId={}&metadata='
 home_headers={
     "Host": "www.ximalaya.com",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36",
 }#通用header
-my_detail_url="http://www.vision123.site/audio/source/{}/1"
+my_detail_url="/audio/source/{}/1"
 list_xpath='//*[@id="award"]//ul/li[@class="_qt"]/div'#列表
 name_str='./a[1]//text()'#名称
 author_str='./a[2]//text()'#作者
@@ -70,40 +71,104 @@ file_header={
 #     else:
 #         res["hasNextPage"]=True
 #     return json.dumps(res)
-#获取某个分类下的专辑
+#获取某个频道下的专辑分类
 @app.route("/audio/list/<int:atype>/<int:page>")
 def get_program_list_new(atype,page):
+    # res_data={}
+    res_data=get_channels_list_for_page(atype,page)
+    # url=list_page_url_new.format(atype,page)
+    # response=requests.get(url,headers=home_headers)
+    # json_data=response.json()
+    # res_data["pageNum"]=json_data["data"]["pageNum"]
+    # res_data["typeNum"]=json_data["data"]["groupId"]
+    # res_data["total"]=json_data["data"]["total"]
+    # res_data["pageSize"]=json_data["data"]["pageSize"]
+    # audio_list=[]
+    # for data in json_data["data"]["channels"]:
+    #     r_data={
+    #         "model_name":data["channel"]["channelName"],
+    #         "relationMetadataValueId":data["channel"]["relationMetadataValueId"],
+    #         "channelId":data["channel"]["channelId"],
+    #         "newCount":data["channel"]["newCount"],
+    #         "trackCount":data["channel"]["trackCount"],
+    #     }
+        # d_list=[]
+        # for d in data["recommendAlbums"]:
+        #     d={
+        #         "audioId":d["albumId"],
+        #         "playCount":d["albumPlayCount"],
+        #         "name":d["albumTitle"],
+        #         "author":d["albumUserNickName"],
+        #         "intro":d["intro"],
+        #         "isPaid":d["isPaid"],
+        #         "url":my_detail_url.format(d["albumId"])
+        #     }
+        #     if not d["isPaid"]:
+        #         d_list.append(d)
+        # r_data["audio_list"]=d_list
+        # audio_list.append(r_data)
+    # res_data["res_data"]=audio_list
+    # json_data_= json.dumps(res_data,ensure_ascii=False)
+    # if int(res_data["total"])>(int(res_data["pageNum"]))*int(res_data["pageSize"]):
+    #     get_program_list_new(atype,page+1)
+    res=jsonify(res_data)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
+#获取某个专辑分类下的专辑
+@app.route("/audio/channel/<int:metadata_id>/<int:page>")
+def get_channels(metadata_id,page):
+    url=channels_page_url.format(page,metadata_id)
+    response=requests.get(url,headers=home_headers)
+    json_data=response.json()
+    res_data={}
+    res_data["pageNum"]=json_data["data"]["pageNum"]
+    # res_data["typeNum"]=json_data["data"]["groupId"]
+    res_data["total"]=json_data["data"]["total"]
+    res_data["pageSize"]=json_data["data"]["pageSize"]
+    audio_list=[]
+    for d in json_data["data"]["albums"]:
+        d={
+            "audioId":d["albumId"],
+            "playCount":d["albumPlayCount"],
+            "name":d["albumTitle"],
+            "author":d["albumUserNickName"],
+            "intro":d["intro"],
+            "isPaid":d["isPaid"],
+            "isFinished":d["isFinished"],
+           "albumTrackCount" :d["albumTrackCount"],
+            "url":my_detail_url.format(d["albumId"])
+        }
+        if not d["isPaid"]:
+            audio_list.append(d)
+    res_data["audio_list"]=audio_list
+    res=jsonify(res_data)
+    res.headers['Access-Control-Allow-Origin']='*'
+    return res
+def get_channels_list_for_page(atype,page):
     res_data={}
     url=list_page_url_new.format(atype,page)
     response=requests.get(url,headers=home_headers)
     json_data=response.json()
-    res_data["pageNum"]=json_data["data"]["pageNum"]
+    pageNum=json_data["data"]["pageNum"]
     res_data["typeNum"]=json_data["data"]["groupId"]
+    res_data["total"]=json_data["data"]["total"]
+    pageSize=json_data["data"]["pageSize"]
     audio_list=[]
     for data in json_data["data"]["channels"]:
         r_data={
-            "model_name":data["channel"]["channelName"]
+            "model_name":data["channel"]["channelName"],
+            "relationMetadataValueId":data["channel"]["relationMetadataValueId"],
+            "channelId":data["channel"]["channelId"],
+            "newCount":data["channel"]["newCount"],
+            "trackCount":data["channel"]["trackCount"],
+            "url":'/audio/channel/{}/1'.format(data["channel"]["relationMetadataValueId"])
         }
-        d_list=[]
-        for d in data["recommendAlbums"]:
-            d={
-                "audioId":d["albumId"],
-                "playCount":d["albumPlayCount"],
-                "name":d["albumTitle"],
-                "author":d["albumUserNickName"],
-                "intro":d["intro"],
-                "isPaid":d["isPaid"],
-                "url":my_detail_url.format(d["albumId"])
-            }
-            if not d["isPaid"]:
-                d_list.append(d)
-        r_data["audio_list"]=d_list
         audio_list.append(r_data)
     res_data["res_data"]=audio_list
     # json_data_= json.dumps(res_data,ensure_ascii=False)
-    res=jsonify(res_data)
-    res.headers['Access-Control-Allow-Origin']='*'
-    return res
+    if int(res_data["total"])>int(pageNum)*int(pageSize):
+        return get_program_list_new(atype,page+1)+audio_list
+    return audio_list
 #获取某个专辑下音频列表
 @app.route("/audio/source/<int:id>/<int:page>")
 def get_program_data(id,page):
@@ -164,14 +229,14 @@ def get_search_res(kw,page):
     res=jsonify(res_data)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
-#获取所有分类
+#获取所有频道
 @app.route("/audio/all")
 def get_home_page():
     type_list=[]
     with open("type_list.json","r",encoding="utf-8") as f:
         data_dict=json.load(f)
         for k in data_dict.keys():
-            type_list.append({"type_name":k,"url":"http://www.vision123.site/audio/list/{}/1".format(data_dict[k])})
+            type_list.append({"type_name":k,"url":"/audio/list/{}/1".format(data_dict[k])})
     # json_data=json.dumps(type_list,ensure_ascii=False)
     res=jsonify(type_list)
     res.headers['Access-Control-Allow-Origin']='*'
