@@ -3,8 +3,10 @@ import requests
 from flask import Flask, render_template,request,make_response,jsonify
 import config
 import logging
+from lxml import etree
 from urllib import parse
 from flask import json
+import re
 app=Flask(__name__)
 
 #第一个接口，用来请求每个分类下的所有节目
@@ -15,7 +17,7 @@ home_headers={
     "Host": "www.ximalaya.com",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36",
 }#通用header
-my_detail_url="/audio/source/{}/1"
+my_detail_url="audio/source/{}/1"
 list_xpath='//*[@id="award"]//ul/li[@class="_qt"]/div'#列表
 name_str='./a[1]//text()'#名称
 author_str='./a[2]//text()'#作者
@@ -161,7 +163,7 @@ def get_channels_list_for_page(atype,page):
             "channelId":data["channel"]["channelId"],
             "newCount":data["channel"]["newCount"],
             "trackCount":data["channel"]["trackCount"],
-            "url":'/audio/channel/{}/1'.format(data["channel"]["relationMetadataValueId"])
+            "url":'audio/channel/{}/1'.format(data["channel"]["relationMetadataValueId"])
         }
         audio_list.append(r_data)
     res_data["res_data"]=audio_list
@@ -233,10 +235,19 @@ def get_search_res(kw,page):
 @app.route("/audio/all")
 def get_home_page():
     type_list=[]
-    with open("type_list.json","r",encoding="utf-8") as f:
-        data_dict=json.load(f)
-        for k in data_dict.keys():
-            type_list.append({"type_name":k,"url":"/audio/list/{}/1".format(data_dict[k])})
+    url="https://www.ximalaya.com/channel/7/"
+    response=requests.get(url,headers=headers)
+    html=etree.HTML(response.text)
+    data_list=html.xpath('//*[@id="award"]/main//div[@class="wrapper tM_"]/a')
+    for data in data_list:
+        d_text="".join(data.xpath('.//text()'))
+        d_url=data.xpath('./@href')[0]
+        d_href=re.findall("/(\d+)/",d_url)[0]
+        type_list.append({"type_name":d_text,"url":"audio/list/{}/1".format(d_href)})
+    # with open("type_list.json","r",encoding="utf-8") as f:
+    #     data_dict=json.load(f)
+    #     for k in data_dict.keys():
+    #         type_list.append({"type_name":k,"url":"/audio/list/{}/1".format(data_dict[k])})
     # json_data=json.dumps(type_list,ensure_ascii=False)
     res=jsonify(type_list)
     res.headers['Access-Control-Allow-Origin']='*'
