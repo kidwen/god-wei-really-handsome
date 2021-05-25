@@ -74,9 +74,11 @@ file_header={
 #         res["hasNextPage"]=True
 #     return json.dumps(res)
 #获取某个频道下的专辑分类
-@app.route("/audio/list/<int:atype>/<int:page_size>/<int:page>")
-def get_program_list_new(atype,page_size,page):
+@app.route("/audio/list/<int:atype>")
+def get_program_list_new(atype):
     # res_data={}
+    page = request.args.get("page")
+    page_size = request.args.get("pageSize")
     res_data=get_channels_list_for_page(atype,page,page_size)
     # url=list_page_url_new.format(atype,page)
     # response=requests.get(url,headers=home_headers)
@@ -117,8 +119,10 @@ def get_program_list_new(atype,page_size,page):
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 #获取某个专辑分类下的专辑
-@app.route("/audio/channel/<int:metadata_id>/<int:page_size>/<int:page>")
-def get_channels(metadata_id,page_size,page):
+@app.route("/audio/channel/<int:metadata_id>")
+def get_channels(metadata_id):
+    page = request.args.get("page")
+    page_size = request.args.get("pageSize")
     url=channels_page_url.format(page,page_size,metadata_id)
     response=requests.get(url,headers=home_headers)
     json_data=response.json()
@@ -172,8 +176,10 @@ def get_channels_list_for_page(atype,page,page_size):
         return get_channels_list_for_page(atype,page+1,page_size)+audio_list
     return audio_list
 #获取某个专辑下音频列表
-@app.route("/audio/source/<int:id>/<int:page_size>/<int:page>")
-def get_program_data(id,page,page_size):
+@app.route("/audio/source/<int:id>")
+def get_program_data(id):
+    page = request.args.get("page")
+    page_size = request.args.get("pageSize")
     data_url=detail_data_url.format(id,page,page_size)
     print(data_url)
     response=requests.get(data_url,headers=home_headers)
@@ -205,9 +211,11 @@ def get_file_data(id):
     real_url=file_data["data"]["src"]
     return real_url
 #根据关键词获取专辑列表
-@app.route("/audio/search/<kw>/<page_size>/<page>")
-def get_search_res(kw,page_size,page):
+@app.route("/audio/search/<kw>")
+def get_search_res(kw):
     kw_quote=parse.quote(kw)
+    page = request.args.get("page")
+    page_size = request.args.get("pageSize")
     search_url='https://www.ximalaya.com/revision/search/main?core=album&kw={}&page={}&spellchecker=true&rows={}&condition=relation&device=iPhone&fq=&paidFilter=false'.format(kw_quote,page,page_size)
     response=requests.get(search_url,headers=headers)
     json_data=response.json()
