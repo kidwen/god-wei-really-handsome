@@ -11,13 +11,13 @@ app=Flask(__name__)
 
 #第一个接口，用来请求每个分类下的所有节目
 #list_page_url='https://www.ximalaya.com/channel/{}/p{}/'# $1分类号，$2页码
-list_page_url_new='https://www.ximalaya.com/revision/metadata/v2/group/channels/recommend/albums?groupId={}&pageNum={}&pageSize=30'
-channels_page_url='https://www.ximalaya.com/revision/metadata/v2/channel/albums?pageNum={}&pageSize=30&sort=1&metadataValueId={}&metadata='
+list_page_url_new='https://www.ximalaya.com/revision/metadata/v2/group/channels/recommend/albums?groupId={}&pageNum={}&pageSize={}'
+channels_page_url='https://www.ximalaya.com/revision/metadata/v2/channel/albums?pageNum={}&pageSize={}&sort=1&metadataValueId={}&metadata='
 home_headers={
     "Host": "www.ximalaya.com",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36",
 }#通用header
-my_detail_url="audio/source/{}/1"
+my_detail_url="audio/source/{}/10/1"
 list_xpath='//*[@id="award"]//ul/li[@class="_qt"]/div'#列表
 name_str='./a[1]//text()'#名称
 author_str='./a[2]//text()'#作者
@@ -27,7 +27,7 @@ play_num='./div[@class="album-wrapper-card kF_"]/a/p//text()'#播放量
 #第二个接口，用来请求每个节目的音频来源,返回json数据，取src为音频来源url
 next_page='//*[@id="award"]/main//nav/ul[@class="pagination-page WJ_"]/li[@class="page-next page-item WJ_"]'
 source_url='https://www.ximalaya.com/revision/play/v1/audio?id={}&ptype=1'#$1节目id
-detail_data_url='https://www.ximalaya.com/revision/album/v1/getTracksList?albumId={}&pageNum={}&pageSize=10'
+detail_data_url='https://www.ximalaya.com/revision/album/v1/getTracksList?albumId={}&pageNum={}&pageSize={}'
 #接下来请求音频来源url
 headers={
     "Accept":"*/*",
@@ -74,10 +74,10 @@ file_header={
 #         res["hasNextPage"]=True
 #     return json.dumps(res)
 #获取某个频道下的专辑分类
-@app.route("/audio/list/<int:atype>/<int:page>")
-def get_program_list_new(atype,page):
+@app.route("/audio/list/<int:atype>/<int:page_size>/<int:page>")
+def get_program_list_new(atype,page_size,page):
     # res_data={}
-    res_data=get_channels_list_for_page(atype,page)
+    res_data=get_channels_list_for_page(atype,page,page_size)
     # url=list_page_url_new.format(atype,page)
     # response=requests.get(url,headers=home_headers)
     # json_data=response.json()
@@ -117,9 +117,9 @@ def get_program_list_new(atype,page):
     res.headers['Access-Control-Allow-Origin']='*'
     return res
 #获取某个专辑分类下的专辑
-@app.route("/audio/channel/<int:metadata_id>/<int:page>")
-def get_channels(metadata_id,page):
-    url=channels_page_url.format(page,metadata_id)
+@app.route("/audio/channel/<int:metadata_id>/<int:page_size>/<int:page>")
+def get_channels(metadata_id,page_size,page):
+    url=channels_page_url.format(page,page_size,metadata_id)
     response=requests.get(url,headers=home_headers)
     json_data=response.json()
     res_data={}
@@ -146,9 +146,9 @@ def get_channels(metadata_id,page):
     res=jsonify(res_data)
     res.headers['Access-Control-Allow-Origin']='*'
     return res
-def get_channels_list_for_page(atype,page):
+def get_channels_list_for_page(atype,page,page_size):
     res_data={}
-    url=list_page_url_new.format(atype,page)
+    url=list_page_url_new.format(atype,page,page_size)
     response=requests.get(url,headers=home_headers)
     json_data=response.json()
     pageNum=json_data["data"]["pageNum"]
@@ -163,18 +163,18 @@ def get_channels_list_for_page(atype,page):
             "channelId":data["channel"]["channelId"],
             "newCount":data["channel"]["newCount"],
             "trackCount":data["channel"]["trackCount"],
-            "url":'audio/channel/{}/1'.format(data["channel"]["relationMetadataValueId"])
+            "url":'audio/channel/{}/30/1'.format(data["channel"]["relationMetadataValueId"])
         }
         audio_list.append(r_data)
     res_data["res_data"]=audio_list
     # json_data_= json.dumps(res_data,ensure_ascii=False)
     if int(res_data["total"])>int(pageNum)*int(pageSize):
-        return get_program_list_new(atype,page+1)+audio_list
+        return get_channels_list_for_page(atype,page+1,page_size)+audio_list
     return audio_list
 #获取某个专辑下音频列表
-@app.route("/audio/source/<int:id>/<int:page>")
-def get_program_data(id,page):
-    data_url=detail_data_url.format(id,page)
+@app.route("/audio/source/<int:id>/<int:page_size>/<int:page>")
+def get_program_data(id,page,page_size):
+    data_url=detail_data_url.format(id,page,page_size)
     print(data_url)
     response=requests.get(data_url,headers=home_headers)
     print(response.status_code)
@@ -205,10 +205,10 @@ def get_file_data(id):
     real_url=file_data["data"]["src"]
     return real_url
 #根据关键词获取专辑列表
-@app.route("/audio/search/<kw>/<page>")
-def get_search_res(kw,page):
+@app.route("/audio/search/<kw>/<page_size>/<page>")
+def get_search_res(kw,page_size,page):
     kw_quote=parse.quote(kw)
-    search_url='https://www.ximalaya.com/revision/search/main?core=album&kw={}&page={}&spellchecker=true&rows=20&condition=relation&device=iPhone&fq=&paidFilter=false'.format(kw_quote,page)
+    search_url='https://www.ximalaya.com/revision/search/main?core=album&kw={}&page={}&spellchecker=true&rows={}&condition=relation&device=iPhone&fq=&paidFilter=false'.format(kw_quote,page,page_size)
     response=requests.get(search_url,headers=headers)
     json_data=response.json()
     res_data={}
@@ -243,7 +243,7 @@ def get_home_page():
         d_text="".join(data.xpath('.//text()'))
         d_url=data.xpath('./@href')[0]
         d_href=re.findall("/(\d+)/",d_url)[0]
-        type_list.append({"type_name":d_text,"url":"audio/list/{}/1".format(d_href)})
+        type_list.append({"type_name":d_text,"id":d_href,"url":"audio/list/{}/30/1".format(d_href)})
     # with open("type_list.json","r",encoding="utf-8") as f:
     #     data_dict=json.load(f)
     #     for k in data_dict.keys():
